@@ -1,8 +1,3 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
 import sys
 import os
 from math import floor
@@ -10,77 +5,6 @@ import re
 import zlib
 import copy
 from nbt import nbt, world
-
-regcoordf = re.compile(r"r\.([-0-9]+)\.([-0-9]+).+")
-
-SECTOR_SIZE = 4096 # 4KiB
-
-
-class chunk(object):
-    def __init__(self, offset, nsec, rf):
-        if offset is not None and nsec is not None and rf is not None:
-            # Save location for next read
-            currloc = rf.tell()
-            self.nsec = nsec
-            self.offset = offset * SECTOR_SIZE
-
-            self.readts(rf)
-
-            self.readchunk(rf)
-
-            # Return to original location
-            rf.seek(currloc)
-
-    def readts(self, rf):
-        # Read timestamp, 4 bytes long
-        rf.seek(4096, 1)
-        self.ts = int.from_bytes(rf.read(4), "big")
-
-    def readchunk(self, rf):
-        # Read in chunk
-        rf.seek(self.offset)
-        self.chunklen = int.from_bytes(rf.read(4), "big")
-        self.comptype = int.from_bytes(rf.read(1), "big")
-
-        if self.comptype != 2:
-            print("Compression type not supported.")
-            raise NotImplementedError
-
-        self.nbtData = zlib.decompress(rf.read(self.chunklen - 1))
-
-    @classmethod
-    def empty(cls):
-        """Create empty chunk (does nothing)"""
-        return cls(None, None, None)
-
-
-def readregion(rootfn: str, fn: str):
-    fullfname = rootfn + "\\" + fn
-    with open(fullfname, "rb") as rf:
-        region = {}
-        bc = list(map(int, regcoordf.fullmatch(filename).group(1, 2)))
-        region["base_coord"] = (bc[0] << 5, bc[1] << 5)
-
-        region["chunks"] = [[chunk.empty()] * 32] * 32
-
-        # 1024 chunks in one region file
-        for i in range(1024):
-            locOffset = int.from_bytes(rf.read(3), 'big')
-            secCount = int.from_bytes(rf.read(1), 'big')
-
-            if (locOffset != 0) and (secCount != 0):
-                region["chunks"][i // 32][i % 32] = chunk(locOffset, secCount, rf)
-
-        return region
-
-
-# Convert chunk coord to region coord
-def chunk2reg(x, z):
-    rx = floor(x / 32.0)
-    rz = floor(z / 32.0)
-
-    return rx, rz
-
 from nbt.nbt import NBTFile, TAG_Long, TAG_Double, TAG_Int, TAG_String, TAG_List, TAG_Compound
 
 def unpack_nbt(tag):
@@ -151,7 +75,6 @@ def pack_nbt(s):
         raise ValueError("Couldn't serialise type %s!" % type(s))
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     worldPath = "./data"
     tagType = "TileEntities"
@@ -174,9 +97,7 @@ if __name__ == '__main__':
 
         return result
 
-    # if len(sys.argv) > 1:
-    #     worldPath = sys.argv[1]
-
+    # Search and substitute action starts here
     sp = re.compile(searchStr)
 
     worldObj = world.WorldFolder(worldPath)
@@ -203,13 +124,3 @@ if __name__ == '__main__':
             if dirtybit:
                 reg.write_chunk(chunk.loc.x, chunk.loc.z, chunk)
 
-
-
-
-
-    # for root, dirs, files in os.walk(worldPath):
-    #     regions = [None] * len(files)
-    #     for i, filename in enumerate(files):
-    #         # regions[i] = readregion(worldPath, filename)
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
