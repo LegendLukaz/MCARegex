@@ -78,7 +78,7 @@ def pack_nbt(s):
 if __name__ == '__main__':
     worldPath = "./data"
     tagType = "TileEntities"
-    id = "minecraft:command_block"
+    id = "Control"
     key = "Command" # Optional
     searchStr = r"(?<=@[ap]\[)([0-9,]+)(?=\])"
 
@@ -102,19 +102,22 @@ if __name__ == '__main__':
 
     worldObj = world.WorldFolder(worldPath)
     for reg in worldObj.iter_regions():
-        for chunk in reg.iter_chunks():
+        relcoords = reg.get_chunk_coords()
+        for idx, chunk in enumerate(reg.iter_chunks()):
             subtag = chunk["Level"][tagType]
 
             dirtybit = False
             for entry in subtag:
                 if entry["id"].value == id:
-                    print(entry.pretty_tree())
                     if key:
                         entry[key].value, n = sp.subn(subfunc, entry[key].value)
                         dirtybit = (n > 0 or dirtybit)
                     else:
                         for k, v in entry.items():
-                            entry[k].value, n = sp.subn(subfunc, v)
+                            if isinstance(v.value, str):
+                                entry[k].value, n = sp.subn(subfunc, v.value)
+                            else:
+                                n = 0
                             dirtybit = (n > 0 or dirtybit)
 
                     print(entry.pretty_tree())
@@ -122,5 +125,5 @@ if __name__ == '__main__':
             # TODO: queue up chunks to be written into region file directly
 
             if dirtybit:
-                reg.write_chunk(chunk.loc.x, chunk.loc.z, chunk)
+                reg.write_chunk(relcoords[idx]['x'], relcoords[idx]['z'], chunk)
 
